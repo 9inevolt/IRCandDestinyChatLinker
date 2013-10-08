@@ -1,161 +1,94 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*- 
+
 import requests, sys, traceback, re, json, time, select, socket
 from websocket import create_connection
 from colorama import init, Fore, Back, Style
 
 '''
 LinkerBot
-This operates 10 echobots in Rizon's IRC network that repeat text from Destiny's website's chat.
-The large number of bots is to avoid channel flood throttling.
-Despite this, messages occasionally still don't transmit due to extreme chat activity.
+This operates one echobot in Rizon's IRC network that repeat text from Destiny's website's chat.
+Many thanks to "djahandarie", a Rizon admin who allowed me bypass the flood limiters, hence the censored password.
+A disadvantage is that if irc.siglost.com goes down, the bot will cease to function, but that's an acceptable consequence.
+A future update will rejoin other servers to send messages if/when irc.siglost.com goes down.
+Could also use some significant DRYing up.
 '''
 
 init()
-first = ""
-msgcount = 0
 pingcount = 0
+ggtime = datetime.datetime.utcnow()
 fo = open("rizonlog.txt", "a")
+HOST="irc.siglost.com"
+NICK = IDENT = REALNAME = "II"
 PORT=6667
 channel = "#destinyecho"
 mydict = {"\u003e":">","\u003c":"<","\\\"":"\"","\\\\":"\\"}
+
+# colors & timestamps console output
 def log(c,s):
 	print(Fore.BLUE + Style.BRIGHT + time.asctime() + Fore.RESET + " " + c + s + Fore.RESET + Back.RESET + Style.NORMAL)
+
+# connects to chat servers
 def s1connect():
-	NICK = IDENT = REALNAME = "I|||||||||"
-	HOST = "irc.thefear.ca"
 	global s1
 	s1=socket.socket( )
 	s1.connect((HOST, PORT))
+	s1.send("PASS MYLOVELYFLOODBYPASSPASSWORD\r\n")
 	s1.send("NICK %s\r\n" % NICK)
 	s1.send("USER %s %s bla :%s\r\n" % (IDENT, HOST, REALNAME))
 	s1.send("JOIN " + channel + "\n")
 	log(Fore.RESET, "s1 connect")
-	time.sleep( 5 )
-def s2connect():
-	NICK = IDENT = REALNAME = "|I||||||||"
-	HOST="irc.broke-it.com"
-	global s2
-	s2=socket.socket( )
-	s2.connect((HOST, PORT))
-	s2.send("NICK %s\r\n" % NICK)
-	s2.send("USER %s %s bla :%s\r\n" % (IDENT, HOST, REALNAME))
-	s2.send("JOIN " + channel + "\n")
-	log(Fore.RESET, "s2 connect")
-	time.sleep( 5 )
-def s3connect():
-	NICK = IDENT = REALNAME = "||I|||||||"
-	HOST="irc.cccp-project.net"
-	global s3
-	s3=socket.socket( )
-	s3.connect((HOST, PORT))
-	s3.send("NICK %s\r\n" % NICK)
-	s3.send("USER %s %s bla :%s\r\n" % (IDENT, HOST, REALNAME))
-	s3.send("JOIN " + channel + "\n")
-	log(Fore.RESET, "s3 connect")
-	time.sleep( 5 )
-def s4connect():
-	NICK = IDENT = REALNAME = "|||I||||||"
-	HOST="irc.cyberdynesystems.net"
-	global s4
-	s4=socket.socket( )
-	s4.connect((HOST, PORT))
-	s4.send("NICK %s\r\n" % NICK)
-	s4.send("USER %s %s bla :%s\r\n" % (IDENT, HOST, REALNAME))
-	s4.send("JOIN " + channel + "\n")
-	log(Fore.RESET, "s4 connect")
-	time.sleep( 5 )
-def s5connect():
-	NICK = IDENT = REALNAME = "||||I|||||"
-	HOST="irc.rizon.io"
-	global s5
-	s5=socket.socket( )
-	s5.connect((HOST, PORT))
-	s5.send("NICK %s\r\n" % NICK)
-	s5.send("USER %s %s bla :%s\r\n" % (IDENT, HOST, REALNAME))
-	s5.send("JOIN " + channel + "\n")
-	log(Fore.RESET, "s5 connect")
-	time.sleep( 5 )
-def s6connect():
-	NICK = IDENT = REALNAME = "|||||I||||"
-	HOST="irc.rizon.us"
-	global s6
-	s6=socket.socket( )
-	s6.connect((HOST, PORT))
-	s6.send("NICK %s\r\n" % NICK)
-	s6.send("USER %s %s bla :%s\r\n" % (IDENT, HOST, REALNAME))
-	s6.send("JOIN " + channel + "\n")
-	log(Fore.RESET, "s6 connect")
-	time.sleep( 5 )
-def s7connect():
-	NICK = IDENT = REALNAME = "||||||I|||"
-	HOST="irc.sxci.net"
-	global s7
-	s7=socket.socket( )
-	s7.connect((HOST, PORT))
-	s7.send("NICK %s\r\n" % NICK)
-	s7.send("USER %s %s bla :%s\r\n" % (IDENT, HOST, REALNAME))
-	s7.send("JOIN " + channel + "\n")
-	log(Fore.RESET, "s7 connect")
-	time.sleep( 5 )
-def s8connect():
-	NICK = IDENT = REALNAME = "|||||||I||"
-	HOST="irc.shakeababy.net"
-	global s8
-	s8=socket.socket( )
-	s8.connect((HOST, PORT))
-	s8.send("NICK %s\r\n" % NICK)
-	s8.send("USER %s %s bla :%s\r\n" % (IDENT, HOST, REALNAME))
-	s8.send("JOIN " + channel + "\n")
-	log(Fore.RESET, "s8 connect")
-	time.sleep( 5 )
-def s9connect():
-	NICK = IDENT = REALNAME = "||||||||I|"
-	HOST="irc.lolipower.org"
-	global s9
-	s9=socket.socket( )
-	s9.connect((HOST, PORT))
-	s9.send("NICK %s\r\n" % NICK)
-	s9.send("USER %s %s bla :%s\r\n" % (IDENT, HOST, REALNAME))
-	s9.send("JOIN " + channel + "\n")
-	log(Fore.RESET, "s9 connect")
-	time.sleep( 5 )
-def s10connect():
-	NICK = IDENT = REALNAME = "|||||||||I"
-	HOST="irc.siglost.com"
-	global s10
-	s10=socket.socket( )
-	s10.connect((HOST, PORT))
-	s10.send("NICK %s\r\n" % NICK)
-	s10.send("USER %s %s bla :%s\r\n" % (IDENT, HOST, REALNAME))
-	s10.send("JOIN " + channel + "\n")
-	log(Fore.RESET, "s10 connect")
-	#time.sleep( 5 )
 def wsconnect():
 	global ws
 	ws = create_connection("ws://www.destiny.gg:9998/ws", header={"Origin: http://www.destiny.gg"})
 	log(Fore.GREEN , "ws connect")
 def dharmaggconnect():
 	global dharmagg
-	dharmagg = create_connection("ws://www.destiny.gg:9998/ws", header={"Cookie: sid=xx","Origin: http://www.destiny.gg"})
+	dharmagg = create_connection("ws://www.destiny.gg:9998/ws", header={"Cookie: authtoken=xx","Origin: http://www.destiny.gg"})
 	log(Fore.GREEN , "dharma connect")
 def woopggconnect():
 	global woopgg
-	woopgg = create_connection("ws://www.destiny.gg:9998/ws", header={"Cookie: sid=xx","Origin: http://www.destiny.gg"})
+	woopgg = create_connection("ws://www.destiny.gg:9998/ws", header={"Cookie: authtoken=xx","Origin: http://www.destiny.gg"})
 	log(Fore.GREEN , "woop connect")
 def bronzerggconnect():
 	global bronzergg
-	bronzergg = create_connection("ws://www.destiny.gg:9998/ws", header={"Cookie: sid=xx","Origin: http://www.destiny.gg"})
+	bronzergg = create_connection("ws://www.destiny.gg:9998/ws", header={"Cookie: authtoken=xx","Origin: http://www.destiny.gg"})
 	log(Fore.GREEN , "bronzer connect")
 def slugconnect():
 	global slug
-	slug = create_connection("ws://www.destiny.gg:9998/ws", header={"Cookie: sid=xx","Origin: http://www.destiny.gg"})
+	slug = create_connection("ws://www.destiny.gg:9998/ws", header={"Cookie: authtoken=xx","Origin: http://www.destiny.gg"})
 	log(Fore.GREEN , "slug connect")
+def salvageconnect():
+	global salvage
+	salvage = create_connection("ws://www.destiny.gg:9998/ws", header={"Cookie: authtoken=xx","Origin: http://www.destiny.gg"})
+	log(Fore.GREEN , "salvage connect")
+def asoconnect():
+	global aso
+	aso = create_connection("ws://www.destiny.gg:9998/ws", header={"Cookie: authtoken=xx","Origin: http://www.destiny.gg"})
+	log(Fore.GREEN , "aso connect")
+def sharkconnect():
+	global shark
+	shark = create_connection("ws://www.destiny.gg:9998/ws", header={"Cookie: sid=xx","Origin: http://www.destiny.gg"})
+	log(Fore.GREEN , "shark connect")
+def szconnect():
+	global sz
+	sz = create_connection("ws://www.destiny.gg:9998/ws", header={"Cookie: authtoken=xx","Origin: http://www.destiny.gg"})
+	log(Fore.GREEN , "sz connect")
+def opconnect():
+	global op
+	op = create_connection("ws://www.destiny.gg:9998/ws", header={"Cookie: authtoken=xx","Origin: http://www.destiny.gg"})
+	log(Fore.GREEN , "op connect")
+def chrisconnect():
+	global chris
+	chris = create_connection("ws://www.destiny.gg:9998/ws", header={"Cookie: authtoken=xx","Origin: http://www.destiny.gg"})
+	log(Fore.GREEN , "chris connect")
 def bubbleconnect():
 	global bubble
 	bubble = create_connection("ws://www.destiny.gg:9998/ws", header={"Cookie: sid=xx","Origin: http://www.destiny.gg"})
 	log(Fore.GREEN , "bubble connect")
 def fruitconnect():
 	global fruit
-	fruit = create_connection("ws://www.destiny.gg:9998/ws", header={"Cookie: sid=xx","Origin: http://www.destiny.gg"})
+	fruit = create_connection("ws://www.destiny.gg:9998/ws", header={"Cookie: authtoken=xx","Origin: http://www.destiny.gg"})
 	log(Fore.GREEN , "fruit connect")
 def xxconnect():
 	global xx
@@ -163,79 +96,31 @@ def xxconnect():
 	log(Fore.GREEN , "xx connect")
 def lemonconnect():
 	global lemon
-	lemon = create_connection("ws://www.destiny.gg:9998/ws", header={"Cookie: sid=xx","Origin: http://www.destiny.gg"})
+	lemon = create_connection("ws://www.destiny.gg:9998/ws", header={"Cookie: authtoken=xx","Origin: http://www.destiny.gg"})
 	log(Fore.GREEN , "lemon connect")
 def jpconnect():
 	global jp
-	jp = create_connection("ws://www.destiny.gg:9998/ws", header={"Cookie: sid=xx","Origin: http://www.destiny.gg"})
+	jp = create_connection("ws://www.destiny.gg:9998/ws", header={"Cookie: authtoken=xx","Origin: http://www.destiny.gg"})
 	log(Fore.GREEN , "jp connect")
+
+#sends to IRC
 def s1msg(msg):
-	global msgcount
-	msgcount += 1
-	if msgcount == 1:
-		try:
-			s1.send("PRIVMSG " + channel + " :" + msg.encode('utf-8') + "\n")
-		except (UnicodeDecodeError, UnicodeEncodeError):
-			s1.send("PRIVMSG " + channel + " :" + msg + "\n")
-	if msgcount == 2:
-		try:
-			s2.send("PRIVMSG " + channel + " :" + msg.encode('utf-8') + "\n")
-		except (UnicodeDecodeError, UnicodeEncodeError):
-			s2.send("PRIVMSG " + channel + " :" + msg + "\n")
-	if msgcount == 3:
-		try:
-			s3.send("PRIVMSG " + channel + " :" + msg.encode('utf-8') + "\n")
-		except (UnicodeDecodeError, UnicodeEncodeError):
-			s3.send("PRIVMSG " + channel + " :" + msg + "\n")
-	if msgcount == 4:
-		try:
-			s4.send("PRIVMSG " + channel + " :" + msg.encode('utf-8') + "\n")
-		except (UnicodeDecodeError, UnicodeEncodeError):
-			s4.send("PRIVMSG " + channel + " :" + msg + "\n")
-	if msgcount == 5:
-		try:
-			s5.send("PRIVMSG " + channel + " :" + msg.encode('utf-8') + "\n")
-		except (UnicodeDecodeError, UnicodeEncodeError):
-			s5.send("PRIVMSG " + channel + " :" + msg + "\n")
-	if msgcount == 6:
-		try:
-			s6.send("PRIVMSG " + channel + " :" + msg.encode('utf-8') + "\n")
-		except (UnicodeDecodeError, UnicodeEncodeError):
-			s6.send("PRIVMSG " + channel + " :" + msg + "\n")
-	if msgcount == 7:
-		try:
-			s7.send("PRIVMSG " + channel + " :" + msg.encode('utf-8') + "\n")
-		except (UnicodeDecodeError, UnicodeEncodeError):
-			s7.send("PRIVMSG " + channel + " :" + msg + "\n")
-	if msgcount == 8:
-		try:
-			s8.send("PRIVMSG " + channel + " :" + msg.encode('utf-8') + "\n")
-		except (UnicodeDecodeError, UnicodeEncodeError):
-			s8.send("PRIVMSG " + channel + " :" + msg + "\n")
-	if msgcount == 9:
-		try:
-			s9.send("PRIVMSG " + channel + " :" + msg.encode('utf-8') + "\n")
-		except (UnicodeDecodeError, UnicodeEncodeError):
-			s9.send("PRIVMSG " + channel + " :" + msg + "\n")
-	if msgcount == 10:
-		msgcount = 0
-		try:
-			s10.send("PRIVMSG " + channel + " :" + msg.encode('utf-8') + "\n")
-		except (UnicodeDecodeError, UnicodeEncodeError):
-			s10.send("PRIVMSG " + channel + " :" + msg + "\n")
+	try:
+		s1.send("PRIVMSG " + channel + " :" + msg.encode('utf-8') + "\n")
+	except (UnicodeDecodeError, UnicodeEncodeError):
+		s1.send("PRIVMSG " + channel + " :" + msg + "\n")
+
+# connects to chat
 s1connect()
-s2connect()
-s3connect()
-s4connect()
-s5connect()
-s6connect()
-s7connect()
-s8connect()
-s9connect()
-s10connect()
 wsconnect()
 dharmaggconnect()
 slugconnect()
+salvageconnect()
+asoconnect()
+sharkconnect()
+szconnect()
+opconnect()
+chrisconnect()
 bubbleconnect()
 fruitconnect()
 xxconnect()
@@ -243,98 +128,102 @@ lemonconnect()
 bronzerggconnect()
 woopggconnect()
 jpconnect()
-log(Fore.BLUE + Back.RED , "v117.aaaaaaaaaa" )
-s1msg("Goliath online.")
+
+# primary loop
+log(Fore.BLUE + Back.RED , "microversion #gamma" )
+s1msg("Carrier has arrived.")
 while 1:
+	
+	# encapsulating try ensures the script still runs even if an error occurs.
 	try:
-		(r, w, x) = select.select([s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, ws, dharmagg, woopgg, slug, bubble, fruit, xx, bronzergg, lemon, jp], [], [])
+		
+		# handles multiple connections
+		(r, w, x) = select.select([s1, ws, dharmagg, woopgg, slug, salvage, aso, shark, sz, op, chris, bubble, fruit, xx, bronzergg, lemon, jp], [], [])
 		for sock in r:
-			if (sock == s1) or (sock == s2) or (sock == s3) or (sock == s4) or (sock == s5) or (sock == s6)  or (sock == s7) or (sock == s8) or (sock == s9) or (sock == s10) :
+			
+			# handles IRC connection
+			if (sock == s1):
 				data = sock.recv(1024).strip('\r\n')
-				m = re.search(':[|I]+!~[|I]+@\S+ PRIVMSG #destinyecho.* :<\w+?>.*', data)
-				if m is None:
-					if first != data and data.find('PING') != 0:
-						first = data
-						if sock == s1:
-							log(Fore.RESET , "1=" + data)
-						elif sock == s2:
-							log(Fore.RESET , "2=" + data)
-						elif sock == s3:
-							log(Fore.RESET , "3=" + data)
-						elif sock == s4:
-							log(Fore.RESET , "4=" + data)
-						elif sock == s5:
-							log(Fore.RESET , "5=" + data)
-						elif sock == s6:
-							log(Fore.RESET , "6=" + data)
-						elif sock == s7:
-							log(Fore.RESET , "7=" + data)
-						elif sock == s8:
-							log(Fore.RESET , "8=" + data)
-						elif sock == s9:
-							log(Fore.RESET , "9=" + data)
-						elif sock == s10:
-							log(Fore.RESET , "10=" + data)
-				if sock == s1:
-					m = re.search(':(.*?)!(.*?) PRIVMSG #(.*?) :(.*)', data)
-					if m is not None:
-						origin = m.group(4)
-						mystr = m.group(4)
-						for k, v in mydict.iteritems():
-							mystr = mystr.replace(v, k)
-						if m.group(2) == "~woopitybo@head.against.the.heart" and origin[0] != "<":
-							if mystr[0] == "~":
-								woopgg.send('MSG {"data":"' + mystr[1:] + '"}')
-							else:
-								dharmagg.send('MSG {"data":"' + mystr + '"}')
-						if "@vee.hoast" in m.group(2) and origin[0] != "<":
-							bronzergg.send('MSG {"data":"' + mystr + '"}')
-						elif "@28E293F6.8D0AAF9A.B646B4DE.IP" in m.group(2) and origin[0] != "<":
-							slug.send('MSG {"data":"' + mystr + '"}')
-						elif "@just.keep.swimming" in m.group(2) and origin[0] != "<":
-							bubble.send('MSG {"data":"' + mystr + '"}')
-						elif "@fruit.of.doom" in m.group(2) and origin[0] != "<":
-							fruit.send('MSG {"data":"' + mystr + '"}')
-						elif "@xxtphty.host" in m.group(2) and origin[0] != "<":
-							xx.send('MSG {"data":"' + mystr + '"}')
-						elif "@stay.noided" in m.group(2) and origin[0] != "<":
-							lemon.send('MSG {"data":"' + mystr + '"}')
-						elif "@goodDeals.jpham9210" in m.group(2) and origin[0] != "<":
-							jp.send('MSG {"data":"' + mystr + '"}')
-					elif data == "":
-						s1connect()
-				elif sock == s2:
-					if data == "":
-						s2connect()
-				elif sock == s3:
-					if data == "":
-						s3connect()
-				elif sock == s4:
-					if data == "":
-						s4connect()
-				elif sock == s5:
-					if data == "":
-						s5connect()
-				elif sock == s6:
-					if data == "":
-						s6connect()
-				elif sock == s7:
-					if data == "":
-						s7connect()
-				elif sock == s8:
-					if data == "":
-						s8connect()
-				elif sock == s9:
-					if data == "":
-						s9connect()
-				elif sock == s10:
-					if data == "":
-						s10connect()
-				if data.find('PING') != -1:
+				if data[:4] != "PING":
+					log(Fore.RESET, data)
+				m = re.search(':(.*?)!(.*?) PRIVMSG #(.*?) :(.*)', data)
+				if m is not None:
+					origin = m.group(4)
+					mystr = m.group(4)
+					for k, v in mydict.iteritems():
+						mystr = mystr.replace(v, k)
+					
+					# admin commands
+					if "@head.against.the.heart" in m.group(2) and origin[0] != "<":
+						if mystr[0] == "~":
+							woopgg.send('MSG {"data":"' + mystr[1:] + '"}')
+						elif origin.find("!switch") == 0:
+							a = ""
+							for x in range(0,randint(3, 30)):
+								a = "I" + a
+							s1.send("NICK %s\r\n" % a)
+						elif origin.find("!reset") == 0:
+							s1.send("NICK II\r\n")
+						elif origin.find("!mute") == 0:
+							dharmagg.send('MUTE {"data":"' + origin.strip().split(" ")[1] + '", "duration":' + str(int(origin.strip().split(" ")[2])*60000000000) + '}')
+						elif origin.find("!unban") == 0:
+							dharmagg.send('UNBAN {"data":"' + origin.strip().split(" ")[1] + '"}')
+						elif origin.find("!unmute") == 0:
+							dharmagg.send('UNMUTE {"data":"' + origin.strip().split(" ")[1] + '"}')
+						elif origin.find("!ipban") == 0:
+							dharmagg.send('BAN {"nick":"' + origin.strip().split(" ")[1] + '", "duration":' + str(int(origin.strip().split(" ")[2])*60000000000) + ', "reason":"' + str(origin.strip().split(" ",3)[3:][0]) + '", "banip":true }')
+						elif origin.find("!ban") == 0:
+							dharmagg.send('BAN {"nick":"' + origin.strip().split(" ")[1] + '", "duration":' + str(int(origin.strip().split(" ")[2])*60000000000) + ', "reason":"' + str(origin.strip().split(" ",3)[3:][0]) + '"}')
+						else:
+							dharmagg.send('MSG {"data":"' + mystr + '"}')
+
+					# other users, generally identified by their vmask or IP address
+					elif "@vee.hoast" in m.group(2) and origin[0] != "<":
+						bronzergg.send('MSG {"data":"' + mystr + '"}')
+					elif "@28E293F6.8D0AAF9A.B646B4DE.IP" in m.group(2) and origin[0] != "<":
+						slug.send('MSG {"data":"' + mystr + '"}')
+					elif "@no.ipaddress.here" in m.group(2) and origin[0] != "<":
+						salvage.send('MSG {"data":"' + mystr + '"}')
+					elif "AsoSako" == m.group(1) and origin[0] != "<":
+						aso.send('MSG {"data":"' + mystr + '"}')
+					elif "@ooh.ha.ha" in m.group(2) and origin[0] != "<":
+						#shark.send('MSG {"data":"' + mystr + '"}')
+						s1msg("Sharkbait, your SID is no longer valid, please consult the topic. If you wish to continue forwarding, I'll need the \"key\".")#unmsged
+					elif "@sztanpet.fake" in m.group(2) and origin[0] != "<":
+						sz.send('MSG {"data":"' + mystr + '"}')
+					elif "@sup.bros" in m.group(2) and origin[0] != "<":
+						op.send('MSG {"data":"' + mystr + '"}')
+					elif "@i.am.the.hentai.prince" in m.group(2) and origin[0] != "<":
+						chris.send('MSG {"data":"' + mystr + '"}')
+					elif "@just.keep.swimming" in m.group(2) and origin[0] != "<":
+						#bubble.send('MSG {"data":"' + mystr + '"}')
+						s1msg("i3ubbles, your SID is no longer valid, please consult the topic. If you wish to continue forwarding, I'll need the \"key\".")
+					elif "@fruit.of.doom" in m.group(2) and origin[0] != "<":
+						fruit.send('MSG {"data":"' + mystr + '"}')
+					elif "@xxtphty.host" in m.group(2) and origin[0] != "<":
+						#xx.send('MSG {"data":"' + mystr + '"}')
+						s1msg("xxtphty, your SID is no longer valid, please consult the topic. If you wish to continue forwarding, I'll need the \"key\".")#unmsged
+					elif "@stay.noided" in m.group(2) and origin[0] != "<":
+						lemon.send('MSG {"data":"' + mystr + '"}')
+					elif "@goodDeals.jpham9210" in m.group(2) and origin[0] != "<":
+						jp.send('MSG {"data":"' + mystr + '"}')
+
+				# disconnect detected
+				elif data == "":
+					s1connect()
+
+				elif data.find('PING') != -1:
 					sock.send('PONG ' + data.split() [1] + '\r\n')
+			
+			# handles websocket connections
 			else:
+				
+				# encapsulating try reports websocket errors
 				try:
+					ggtime = datetime.datetime.utcnow() #reconnect time initializer
 					data = sock.recv().strip('\r\n')
+					
+					# determines where error occured.
 					if data[:3] == "ERR":
 						if sock == ws:
 							socky = "ws"
@@ -346,6 +235,18 @@ while 1:
 							socky = "bronzer"
 						elif sock == slug:
 							socky = "slug"
+						elif sock == salvage:
+							socky = "salvage"
+						elif sock == aso:
+							socky = "aso"
+						elif sock == shark:
+							socky = "shark"
+						elif sock == sz:
+							socky = "sz"
+						elif sock == op:
+							socky = "op"
+						elif sock == chris:
+							socky = "chris"
 						elif sock == bubble:
 							socky = "bubble"
 						elif sock == fruit:
@@ -359,8 +260,12 @@ while 1:
 						else:
 							socky = "unknown sock"
 						s1msg("<CHAT_ERROR> " + socky + ":" + data)
+					
+					# pingpong
 					if data[0:4] == "PING":
 						sock.send("PONG" + data[4:])
+					
+					# primary websocket connection that sends messages to IRC via s1msg
 					if sock == ws:
 						a = data.split(' ',1)
 						command = a[0]
@@ -391,21 +296,12 @@ while 1:
 							s1msg( "<" + payload["nick"] + "> <=== just unbanned " + payload["data"])
 						elif command == "PING":
 							sock.send("PONG" + data[4:])
-							if pingcount % 300 == 0:
-								requests.Session().get('http://www.destiny.gg/ping', headers={"Cookie": "sid=xx"}) #bronzer
-								requests.Session().get('http://www.destiny.gg/ping', headers={"Cookie": "sid=xx"}) #slug
-								requests.Session().get('http://www.destiny.gg/ping', headers={"Cookie": "sid=xx"}) #bubble
-								requests.Session().get('http://www.destiny.gg/ping', headers={"Cookie": "sid=xx"}) #woopboop
-								requests.Session().get('http://www.destiny.gg/ping', headers={"Cookie": "sid=xx"}) #lemon
-								requests.Session().get('http://www.destiny.gg/ping', headers={"Cookie": "sid=xx"}) #jp
-								requests.Session().get('http://www.destiny.gg/ping', headers={"Cookie": "sid=xx"}) #fruit
-								requests.Session().get('http://www.destiny.gg/ping', headers={"Cookie": "sid=xx"}) #xx
-								log(Fore.YELLOW, "SESSION REFRESHED")
-							pingcount += 1
 						elif command == "NAMES" or command == "QUIT" or command == "JOIN":
 							pass
 						elif command != "":
 							s1msg( "<UNKNOWN_COMMAND> " + data)
+				
+				# reconnects on error, typically a websocket disconnect
 				except:
 					try:
 						time.sleep( 2 )
@@ -420,6 +316,18 @@ while 1:
 							bronzerggconnect()
 						elif sock == slug:
 							slugconnect()
+						elif sock == salvage:
+							salvageconnect()
+						elif sock == aso:
+							asoconnect()
+						elif sock == shark:
+							sharkconnect()
+						elif sock == sz:
+							szconnect()
+						elif sock == op:
+							opconnect()
+						elif sock == chris:
+							chrisconnect()
 						elif sock == bubble:
 							bubbleconnect()
 						elif sock == fruit:
@@ -434,8 +342,25 @@ while 1:
 						raise
 					except:
 						log(Fore.RED,"Random error in dharmagg?")
-						traceback.print_tb(sys.exc_info()[2])
-						log(Fore.RED , str(sys.exc_info()))
+			
+			# reconnects after 2 minutes of inactivity, hopefully
+			if int((datetime.datetime.utcnow() - ggtime).total_seconds()) > 120:
+				wsconnect()
+				dharmaggconnect()
+				slugconnect()
+				salvageconnect()
+				asoconnect()
+				sharkconnect()
+				szconnect()
+				opconnect()
+				chrisconnect()
+				bubbleconnect()
+				fruitconnect()
+				xxconnect()
+				lemonconnect()
+				bronzerggconnect()
+				woopggconnect()
+				jpconnect()
 			#fo.write( data + "\n")
 			#print data
 	except (KeyboardInterrupt, SystemExit):
